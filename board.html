@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CryChan - Board</title>
+    <link rel="icon" type="image/png" href="https://i.postimg.cc/gJNBDbDC/Captura-de-pantalla-2026-03-02-171058.png">
+    <link rel="apple-touch-icon" href="https://i.postimg.cc/gJNBDbDC/Captura-de-pantalla-2026-03-02-171058.png">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <a href="index.html" class="back-btn">← Volver</a>
+        <h1 id="boardTitle">Cargando Tablón...</h1>
+        <div id="cooldownTimer" class="cooldown"></div>
+    </header>
+
+    <main>
+        <div class="new-post">
+            <textarea id="postText" placeholder="Escribe un mensaje anónimo..."></textarea>
+            <input type="file" id="postImage" accept="image/*">
+            <button id="createPostBtn">Publicar Mensaje</button>
+        </div>
+
+        <div id="postsContainer" class="posts-container"></div>
+    </main>
+
+    <div style="position: fixed; bottom: 20px; left: 20px; z-index: 200; font-family: Arial, sans-serif;">
+        <button id="toggleUsernameBtn" style="cursor: pointer; background: #007bff; color: white; border: none; padding: 8px 12px; font-weight: bold;">👤 Añadir Username</button>
+        
+        <div id="usernamePanel" style="display: none; margin-top: 5px; background: #fff; border: 1px solid #aaa; padding: 10px; flex-direction: column; gap: 5px;">
+            <input type="text" id="usernameInput" placeholder="Escribe tu username" style="padding: 5px; border: 1px solid #888;">
+            <div style="display: flex; gap: 5px;">
+                <button id="saveUsernameBtn" style="cursor:pointer; padding: 3px 8px; background: #28a745; color: white; border: none;">Guardar</button>
+                <button id="cancelUsernameBtn" style="cursor:pointer; padding: 3px 8px; background: #dc3545; color: white; border: none;">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+const SB_URL = "https://eqrqpzwdkvtnhbmzgxjq.supabase.co";
+const SB_KEY = "sb_publishable_z298DmGKzSJzJbzLv17s3g_QL1hcAqi";
+
+// Tu Clave Pública VAPID configurada
+const PUBLIC_VAPID_KEY = "BIlgSBHIVVWwaypLTp8nSY0NFqxvRBZB1_p800UoShwkodKbF62xSlSFgf6idJ221HsIrzDug23cAUyCu71Cg_o";
+
+const parametrosURL = new URLSearchParams(window.location.search);
+const nombreTablon = parametrosURL.get('board') || 'general';
+document.getElementById('boardTitle').textContent = `/${nombreTablon}/`;
+
+const txtArea = document.getElementById('postText');
+
+// Registrar Service Worker y suscribir a Web Push al entrar
+async function registrarWebPush() {
+    if ('serviceWorker' in navigator && 'PushManager' in window) {
+        try {
+            const registro = await navigator.serviceWorker.register('/sw.js');
+            
+            let suscripcion = await registro.pushManager.getSubscription();
+            if (!suscripcion) {
+                const permiso = await Notification.requestPermission();
+                if (permiso === 'granted') {
+                    suscripcion = await registro.pushManager.subscribe({
+                        userVisibleOnly: true,
+                        applicationServerKey: urlBase64ToUint8Array(PUBLIC_VAPID_KEY)
+                    });
+                }
+            }
+            if (suscripcion) {
+                localStorage.setItem('crychan_push_sub', JSON.stringify(suscripcion));
+            }
+        } catch (err) {
+            console.warn("Error configurando Web Push:", err);
+        }
+    }
+}
+
+function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+}
+
+registrarWebPush();
+
+txtArea.addEventListener('keydown', function(e) {
+    if (e.key === 'Backspace') {
+        const cursorPunto = txtArea.selectionStart;
+        const textoCompleto = txtArea.value;
+        const matchCita = textoCompleto.match(/^>>.+?\n/);
+        
+        if (matchCita) {
+            const largoCita = matchCita[0].length;
+            if (cursorPunto === largoCita) {
+                txtArea.value = textoCompleto.substring(largoCita);
+                e.preventDefault();
+            }
+        }
+    }
+});
+
+function responderPost(id) {
+    const cita = `>>${id}\n`;
+    if (!txtArea.value.includes(`>>${id}`)) {
+        txtArea.value = cita + txtArea.value;
+    }
+    txtArea.focus();
+    const match = txtArea.value.match(/^>>.+?\n/);
+    const largoCita = match ? match[0].length : cita.length;
+    txtArea.setSelectionRange(largoCita, largoCita);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function actualizarReloj() {
+    const msCiclo = 3 * 24 * 60 * 60 * 1000;
+    const tiempoFalta = msCiclo - (Date.now() % msCiclo);
+    const d = Math.floor(tiempoFalta / 86400000);
+    const h = Math.floor((tiempoFalta % 86400000) / 3600000);
+    const m = Math.floor((tiempoFalta % 3600000) / 60000);
+    const s = Math.floor((tiempoFalta % 60000) / 1000);
+    document.getElementById('cooldownTimer').textContent = `Reset en: ${d}d ${h}h ${m}m ${s}s`;
+}
+setInterval(actualizarReloj, 1000);
+
+async function loadPosts() {
+    try {
+        const respuesta = await fetch(`${SB_URL}/rest/v1/publicaciones?junta=eq.${nombreTablon}&order=id.desc`, {
+            headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` }
+        });
+        const publicaciones = await respuesta.json();
+        const contenedor = document.getElementById('postsContainer');
+        
+        if (contenedor.children.length === publicaciones.length) return;
+        
+        contenedor.innerHTML = '';
+        publicaciones.forEach(item => {
+            const postDiv = document.createElement('div');
+            postDiv.className = 'post';
+            const fechaLegible = new Date(item.fecha).toLocaleString();
+            
+            let autorTexto = `Anonymous <span style="font-size:0.75em; opacity:0.8;">ID: ${item.id}`;
+            let contenidoLimpio = item.contenido || '';
+
+            if (item.contenido && item.contenido.startsWith("[USER:")) {
+                const finMarca = item.contenido.indexOf("]");
+                if (finMarca !== -1) {
+                    const usuarioExtraido = item.contenido.substring(6, finMarca);
+                    autorTexto = `${usuarioExtraido} <span style="font-size:0.75em; opacity:0.8;">ID: ${item.id}`;
+                    contenidoLimpio = item.contenido.substring(finMarca + 1);
+                }
+            }
+
+            postDiv.innerHTML = `
+                <div class="author">
+                    ${autorTexto} - ${fechaLegible}</span>
+                    <a href="javascript:void(0)" onclick="responderPost(${item.id})" style="margin-left:10px; font-size:0.8em; color:#007bff; text-decoration:none;">[Responder]</a>
+                </div>
+                <pre>${contenidoLimpio}</pre>
+                ${item.imagen_url ? `<img src="${item.imagen_url}" class="post-image">` : ''}
+            `;
+            contenedor.appendChild(postDiv);
+        });
+    } catch (error) { console.error(error); }
+}
+
+document.getElementById('createPostBtn').onclick = async () => {
+    const texto = txtArea.value.trim();
+    const archivoImagen = document.getElementById('postImage').files[0];
+    const boton = document.getElementById('createPostBtn');
+    
+    if (!texto && !archivoImagen) return;
+
+    boton.disabled = true;
+    boton.textContent = "Publicando...";
+
+    const fechaDeCorte = new Date();
+    fechaDeCorte.setDate(fechaDeCorte.getDate() - 3);
+    await fetch(`${SB_URL}/rest/v1/publicaciones?fecha=lt.${fechaDeCorte.toISOString()}`, {
+        method: 'DELETE',
+        headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` }
+    });
+
+    if (archivoImagen) {
+        const lector = new FileReader();
+        lector.onload = async (e) => { await subirMensaje(texto, e.target.result); };
+        lector.readAsDataURL(archivoImagen);
+    } else { 
+        await subirMensaje(texto, null); 
+    }
+};
+
+async function subirMensaje(cont, img) {
+    try {
+        let textoFinal = cont;
+        const nombreGuardado = localStorage.getItem("custom_username");
+        if (nombreGuardado && nombreGuardado.trim() !== "") {
+            textoFinal = `[USER:${nombreGuardado.trim()}]` + cont;
+        }
+
+        const subActual = localStorage.getItem('crychan_push_sub');
+
+        // Guardar el post en Supabase con la suscripción del autor
+        await fetch(`${SB_URL}/rest/v1/publicaciones`, {
+            method: 'POST',
+            headers: { 
+                'apikey': SB_KEY, 
+                'Authorization': `Bearer ${SB_KEY}`, 
+                'Content-Type': 'application/json' 
+            },
+            body: JSON.stringify({ 
+                junta: nombreTablon, 
+                contenido: textoFinal, 
+                imagen_url: img,
+                push_id: subActual
+            })
+        });
+
+        // Detectar si cita a otro post y notificar
+        const matchCita = cont.match(/^>>(\d+)/);
+        if (matchCita) {
+            const idDestino = parseInt(matchCita[1], 10);
+            const resOriginal = await fetch(`${SB_URL}/rest/v1/publicaciones?id=eq.${idDestino}&select=push_id`, {
+                headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` }
+            });
+            const datosOriginal = await resOriginal.json();
+            
+            if (Array.isArray(datosOriginal) && datosOriginal.length > 0 && datosOriginal[0].push_id) {
+                let subDestino;
+                try {
+                    subDestino = typeof datosOriginal[0].push_id === 'string' 
+                        ? JSON.parse(datosOriginal[0].push_id) 
+                        : datosOriginal[0].push_id;
+                } catch(e) { subDestino = null; }
+
+                if (subDestino && subDestino.endpoint) {
+                    await fetch("/.netlify/functions/enviar", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ 
+                            subscription: subDestino, 
+                            autorNombre: nombreGuardado || "Anónimo" 
+                        })
+                    });
+                }
+            }
+        }
+
+        txtArea.value = "";
+        document.getElementById('postImage').value = "";
+        loadPosts();
+    } catch (e) { console.warn("Error al enviar:", e); }
+    finally {
+        const boton = document.getElementById('createPostBtn');
+        boton.disabled = false;
+        boton.textContent = "Publicar Mensaje";
+    }
+}
+
+const toggleUsernameBtn = document.getElementById("toggleUsernameBtn");
+const usernamePanel = document.getElementById("usernamePanel");
+const usernameInput = document.getElementById("usernameInput");
+const saveUsernameBtn = document.getElementById("saveUsernameBtn");
+const cancelUsernameBtn = document.getElementById("cancelUsernameBtn");
+
+toggleUsernameBtn.onclick = () => {
+    usernamePanel.style.display = (usernamePanel.style.display === "none") ? "flex" : "none";
+};
+
+if (localStorage.getItem("custom_username")) {
+    usernameInput.value = localStorage.getItem("custom_username");
+    toggleUsernameBtn.textContent = `👤 User: ${localStorage.getItem("custom_username")}`;
+}
+
+saveUsernameBtn.onclick = () => {
+    const nombre = usernameInput.value.trim();
+    if (nombre) {
+        localStorage.setItem("custom_username", nombre);
+        toggleUsernameBtn.textContent = `👤 User: ${nombre}`;
+        usernamePanel.style.display = "none";
+        loadPosts();
+    }
+};
+
+cancelUsernameBtn.onclick = () => {
+    usernameInput.value = "";
+    localStorage.removeItem("custom_username");
+    toggleUsernameBtn.textContent = "👤 Añadir Username";
+    usernamePanel.style.display = "none";
+    loadPosts();
+};
+
+loadPosts();
+actualizarReloj();
+setInterval(loadPosts, 3000);
+</script>
+
+<!-- SISTEMA DE TEMAS REFINADO -->
+<style>
+  body { transition: background-color 0.3s ease, color 0.3s ease !important; }
+  .theme-switcher-container { position: fixed; top: 15px; left: 15px; z-index: 99999; }
+  .theme-circle-btn { width: 42px; height: 42px; border-radius: 50%; background: #1f1f23; border: 2px solid rgba(255, 255, 255, 0.2); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 19px; }
+  .theme-menu { position: absolute; top: 50px; left: 0; background: #18181b; border: 1px solid #3f3f46; border-radius: 10px; padding: 8px; display: flex; flex-direction: column; gap: 5px; min-width: 170px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5); opacity: 0; visibility: hidden; transform: translateY(-8px); transition: all 0.22s ease; }
+  .theme-switcher-container:hover .theme-menu { opacity: 1; visibility: visible; transform: translateY(0); }
+  .theme-option { background: transparent; border: none; color: #f4f4f5; padding: 8px 12px; border-radius: 6px; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; }
+  .theme-option:hover { background: #27272a; }
+  .color-dot { width: 13px; height: 13px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.3); display: inline-block; }
+  body.theme-rojo { background-color: #160303 !important; color: #fce8e8 !important; }
+  body.theme-rojo header h1, body.theme-rojo #boardTitle { color: #ff4d4d !important; }
+  body.theme-rojo .cooldown { background-color: #240505 !important; color: #ff3333 !important; border: 1px solid #ff1a1a !important; }
+  body.theme-rojo .post, body.theme-rojo #usernamePanel { background-color: #210707 !important; border-color: #5c1c1c !important; color: #fce8e8 !important; }
+  body.theme-rojo textarea, body.theme-rojo input[type="text"] { background-color: #120303 !important; color: #fff !important; border-color: #5c1c1c !important; }
+  body.theme-morado { background-color: #12071c !important; color: #f6e8fc !important; }
+  body.theme-morado header h1, body.theme-morado #boardTitle { color: #c77dff !important; }
+  body.theme-morado .cooldown { background-color: #1c0b2b !important; color: #b55fe6 !important; border: 1px solid #9933ff !important; }
+  body.theme-morado .post, body.theme-morado #usernamePanel { background-color: #190a29 !important; border-color: #4d1c73 !important; color: #f6e8fc !important; }
+  body.theme-morado textarea, body.theme-morado input[type="text"] { background-color: #0d0414 !important; color: #fff !important; border-color: #4d1c73 !important; }
+</style>
+
+<div class="theme-switcher-container">
+  <button class="theme-circle-btn" title="Cambiar tema">🎨</button>
+  <div class="theme-menu">
+    <button class="theme-option" onclick="setCryTheme('default')"><span class="color-dot" style="background: #e6e6dc;"></span> Predeterminado</button>
+    <button class="theme-option" onclick="setCryTheme('rojo')"><span class="color-dot" style="background: #880000;"></span> Rojo</button>
+    <button class="theme-option" onclick="setCryTheme('morado')"><span class="color-dot" style="background: #6a0b9a;"></span> Morado</button>
+  </div>
+</div>
+
+<script>
+  function setCryTheme(theme) {
+    document.body.classList.remove('theme-rojo', 'theme-morado');
+    if (theme !== 'default') document.body.classList.add('theme-' + theme);
+    localStorage.setItem('crychan_theme', theme);
+  }
+  const savedTheme = localStorage.getItem('crychan_theme');
+  if (savedTheme && savedTheme !== 'negro') setCryTheme(savedTheme);
+</script>
+
+</body>
+</html>

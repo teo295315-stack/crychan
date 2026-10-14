@@ -1,0 +1,250 @@
+/* =====================
+   GENERAL
+===================== */
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    background-color: #e6e6dc; /* fondo 4chan */
+    color: #000;
+    margin: 0;
+    padding: 0;
+}
+
+/* =====================
+   HEADER
+===================== */
+header {
+    text-align: center;
+    padding: 20px 10px;
+    position: relative;
+}
+
+.logo-title {
+    font-size: 4em;
+    font-weight: bold;
+    color: #007bff;
+    margin: 0;
+}
+
+.subtitle {
+    font-size: 1.4em;
+    color: #333;
+    margin-top: 5px;
+}
+
+/* =====================
+   COOLDOWN TIMER
+===================== */
+.cooldown {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    background: #fff;
+    border: 1px solid #aaa;
+    padding: 5px 10px;
+    font-family: monospace;
+    font-size: 0.95em;
+}
+
+/* =====================
+   BOARDS BAR
+===================== */
+.boards-bar {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    font-family: monospace;
+    font-size: 1.3em;
+    padding: 15px 0;
+}
+
+.board-item {
+    color: #007bff;
+    font-weight: bold;
+    text-decoration: none;
+    margin: 0 10px;
+}
+
+.board-item:hover {
+    text-decoration: underline;
+}
+
+.board-item::after {
+    content: "|";
+    margin-left: 10px;
+    color: #555;
+}
+
+.board-item:last-child::after {
+    content: "";
+}
+
+/* =====================
+   ADD BOARD BUTTON
+===================== */
+.add-btn {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    font-size: 2.2em;
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+}
+
+.add-btn:hover {
+    background-color: #0056b3;
+}
+
+/* =====================
+   CREATE BOARD PANEL
+===================== */
+.panel {
+    position: fixed;
+    bottom: 85px;
+    right: 20px;
+    background: #fff;
+    border: 1px solid #aaa;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    z-index: 200;
+}
+
+.panel input {
+    margin-bottom: 5px;
+}
+
+.panel button {
+    margin-top: 3px;
+}
+
+.hidden {
+    display: none;
+}
+
+/* =====================
+   BOARD PAGE
+===================== */
+.back-btn {
+    position: absolute;
+    top: 15px;
+    left: 20px;
+    font-family: monospace;
+    color: #007bff;
+    text-decoration: none;
+}
+
+.back-btn:hover {
+    text-decoration: underline;
+}
+
+.posts-container {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+/* =====================
+   POSTS
+===================== */
+.post {
+    background: #fff;
+    border: 1px solid #aaa;
+    padding: 10px;
+    margin-bottom: 15px;
+    position: relative;
+}
+
+.author {
+    color: green;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.post pre {
+    white-space: pre-wrap;
+    font-family: inherit;
+}
+
+.post-image {
+    max-width: 300px;
+    max-height: 300px;
+    border: 1px solid #aaa;
+    margin-top: 5px;
+}
+
+/* =====================
+   REPLIES
+===================== */
+.reply {
+    background: #f9f9f9;
+    border: 1px solid #aaa;
+    padding: 8px;
+    margin: 8px 0 0 20px;
+}
+
+.reply-panel {
+    margin-top: 5px;
+}
+
+.reply-panel textarea {
+    width: 100%;
+    resize: vertical;
+}
+
+.reply-btn,
+.delete-btn {
+    margin-top: 5px;
+    cursor: pointer;
+}
+
+/* =====================
+   NEW POST
+===================== */
+.new-post {
+    padding: 20px;
+}
+
+.new-post textarea {
+    width: 100%;
+    min-height: 60px;
+    resize: vertical;
+}
+
+.new-post input[type="file"] {
+    margin-top: 5px;
+}
+
+.new-post button {
+    margin-top: 5px;
+}
+
+/* =====================
+   FOOTER / DONATE
+===================== */
+footer {
+    text-align: center;
+    margin: 30px 0;
+}
+
+.donate-btn {
+    background-color: #ffcc00;
+    border: none;
+    padding: 10px 25px;
+    font-size: 1.1em;
+    cursor: pointer;
+}
+
+.donate-btn:hover {
+    background-color: #ffdd33;
+}
+
+.donate-text {
+    margin-top: 5px;
+    font-size: 0.95em;
+    color: #333;
+}

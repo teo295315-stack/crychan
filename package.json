@@ -1,0 +1,9 @@
+{
+  "name": "crychan",
+  "version": "1.0.0",
+  "description": "CryChan Imageboard",
+  "main": "index.js",
+  "dependencies": {
+    "web-push": "^3.6.6"
+  }
+}
