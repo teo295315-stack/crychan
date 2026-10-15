@@ -1,47 +1,71 @@
-// Función auxiliar para convertir la clave VAPID
-function urlBase64ToUint8Array(base64String) {
-    const padding = '='.repeat((4 - base64String.length % 4) % 4);
-    const base64 = (base64String + padding)
-        .replace(/\-/g, '+')
-        .replace(/_/g, '/');
+const webpush = require('web-push');
 
-    const rawData = window.atob(base64);
-    const outputArray = new Uint8Array(rawData.length);
+exports.handler = async (event, context) => {
+    // Configurar cabeceras de respuesta (CORS)
+    const headers = {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Content-Type': 'application/json'
+    };
 
-    for (let i = 0; i < rawData.length; ++i) {
-        outputArray[i] = rawData.charCodeAt(i);
-    }
-    return outputArray;
-}
-
-// Función principal para pedir permisos y suscribir
-async function solicitarPermisoNotificaciones() {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-        console.warn('Este navegador no soporta notificaciones Push.');
-        return;
+    // Manejar petición preflight de navegador
+    if (event.httpMethod === 'OPTIONS') {
+        return { statusCode: 200, headers, body: 'OK' };
     }
 
-    const permiso = await Notification.requestPermission();
-    
-    if (permiso === 'granted') {
-        console.log('Permiso concedido, suscribiendo al Service Worker...');
-        const registro = await navigator.serviceWorker.ready;
+    if (event.httpMethod !== 'POST') {
+        return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method Not Allowed' }) };
+    }
+
+    try {
+        if (!event.body) {
+            return { statusCode: 400, headers, body: JSON.stringify({ error: 'Body vacío' }) };
+        }
+
+        const data = JSON.parse(event.body);
+        const suscripcion = data.subscription || data;
+
+        // Validar estructura básica de suscripción
+        if (!suscripcion || !suscripcion.endpoint) {
+            return { statusCode: 400, headers, body: JSON.stringify({ error: 'Suscripción o endpoint no válido' }) };
+        }
+
+        // Claves VAPID
+        const publicVapidKey = 'BIlgSBHIVVWwaypLTp8nSY0NFqxvRBZB1_p800UoShwkodKbF62xSlSFgf6idJ221HsIrzDug23cAUyCu71Cg_o';
+        const privateVapidKey = process.env.VAPID_PRIVATE_KEY;
+
+        // Si existe la clave privada, intentar enviar la notificación de prueba/alerta
+        if (privateVapidKey) {
+            webpush.setVapidDetails(
+                'mailto:admin@crychan.com',
+                publicVapidKey,
+                privateVapidKey
+            );
+
+            const payload = JSON.stringify({
+                title: "CryChan - Notificación",
+                body: `¡Alguien ha respondido a tu mensaje!`,
+                icon: "/icon.png"
+            });
+
+            await webpush.sendNotification(suscripcion, payload);
+        }
+
+        // Devolver respuesta OK limpia para evitar el error 502
+        return {
+            statusCode: 200,
+            headers,
+            body: JSON.stringify({ message: 'Suscripción procesada con éxito' })
+        };
+
+    } catch (error) {
+        console.error("Error en Netlify Function enviar.js:", error);
         
-        // Poner AQUÍ tu clave pública VAPID real entre comillas
-        const vapidPublicKey = 'BIlgSBHIVVWwaypLTp8nSY0NFqxvRBZB1_p800UoShwkodKbF62xSlSFgf6idJ221HsIrzDug23cAUyCu71Cg_o'; 
-        
-        const suscripcion = await registro.pushManager.subscribe({
-            userVisibleOnly: true, // OBLIGATORIO para Android/Chrome
-            applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
-        });
-
-        // Enviar la nueva suscripción a tu backend en Netlify
-        await fetch('/.netlify/functions/enviar', {
-            method: 'POST',
-            body: JSON.stringify(suscripcion),
-            headers: { 'Content-Type': 'application/json' }
-        });
-    } else {
-        console.log('El usuario denegó las notificaciones.');
+        // Retornar 200 con log de advertencia para no romper el flujo del cliente
+        return {
+            statusCode: 200,
+            headers,
+            body: JSON.stringify({ warning: 'Procesado con advertencia', details: error.message })
+        };
     }
-}
+};
