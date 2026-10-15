@@ -1,10 +1,8 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#000000">
-
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CryChan - Board</title>
@@ -42,8 +40,11 @@
     </div>
 
 <script>
-const SB_URL = "https://eqrqpzwdkvtnhbmzgxjq.supabase.co";
-const SB_KEY = "sb_publishable_z298DmGKzSJzJbzLv17s3g_QL1hcAqi";
+// Configuración protegida contra conflictos
+if (typeof SB_URL === 'undefined') {
+    var SB_URL = "https://eqrqpzwdkvtnhbmzgxjq.supabase.co";
+    var SB_KEY = "sb_publishable_z298DmGKzSJzJbzLv17s3g_QL1hcAqi";
+}
 
 // Tu Clave Pública VAPID configurada
 const PUBLIC_VAPID_KEY = "BIlgSBHIVVWwaypLTp8nSY0NFqxvRBZB1_p800UoShwkodKbF62xSlSFgf6idJ221HsIrzDug23cAUyCu71Cg_o";
@@ -127,7 +128,8 @@ function actualizarReloj() {
     const h = Math.floor((tiempoFalta % 86400000) / 3600000);
     const m = Math.floor((tiempoFalta % 3600000) / 60000);
     const s = Math.floor((tiempoFalta % 60000) / 1000);
-    document.getElementById('cooldownTimer').textContent = `Reset en: ${d}d ${h}h ${m}m ${s}s`;
+    const timerElem = document.getElementById('cooldownTimer');
+    if (timerElem) timerElem.textContent = `Reset en: ${d}d ${h}h ${m}m ${s}s`;
 }
 setInterval(actualizarReloj, 1000);
 
@@ -138,6 +140,7 @@ async function loadPosts() {
         });
         const publicaciones = await respuesta.json();
         const contenedor = document.getElementById('postsContainer');
+        if (!contenedor) return;
         
         if (contenedor.children.length === publicaciones.length) return;
         
@@ -172,31 +175,34 @@ async function loadPosts() {
     } catch (error) { console.error(error); }
 }
 
-document.getElementById('createPostBtn').onclick = async () => {
-    const texto = txtArea.value.trim();
-    const archivoImagen = document.getElementById('postImage').files[0];
-    const boton = document.getElementById('createPostBtn');
-    
-    if (!texto && !archivoImagen) return;
+const createPostBtn = document.getElementById('createPostBtn');
+if (createPostBtn) {
+    createPostBtn.onclick = async () => {
+        const texto = txtArea.value.trim();
+        const archivoInput = document.getElementById('postImage');
+        const archivoImagen = archivoInput ? archivoInput.files[0] : null;
+        
+        if (!texto && !archivoImagen) return;
 
-    boton.disabled = true;
-    boton.textContent = "Publicando...";
+        createPostBtn.disabled = true;
+        createPostBtn.textContent = "Publicando...";
 
-    const fechaDeCorte = new Date();
-    fechaDeCorte.setDate(fechaDeCorte.getDate() - 3);
-    await fetch(`${SB_URL}/rest/v1/publicaciones?fecha=lt.${fechaDeCorte.toISOString()}`, {
-        method: 'DELETE',
-        headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` }
-    });
+        const fechaDeCorte = new Date();
+        fechaDeCorte.setDate(fechaDeCorte.getDate() - 3);
+        await fetch(`${SB_URL}/rest/v1/publicaciones?fecha=lt.${fechaDeCorte.toISOString()}`, {
+            method: 'DELETE',
+            headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` }
+        });
 
-    if (archivoImagen) {
-        const lector = new FileReader();
-        lector.onload = async (e) => { await subirMensaje(texto, e.target.result); };
-        lector.readAsDataURL(archivoImagen);
-    } else { 
-        await subirMensaje(texto, null); 
-    }
-};
+        if (archivoImagen) {
+            const lector = new FileReader();
+            lector.onload = async (e) => { await subirMensaje(texto, e.target.result); };
+            lector.readAsDataURL(archivoImagen);
+        } else { 
+            await subirMensaje(texto, null); 
+        }
+    };
+}
 
 async function subirMensaje(cont, img) {
     try {
@@ -208,7 +214,6 @@ async function subirMensaje(cont, img) {
 
         const subActual = localStorage.getItem('crychan_push_sub');
 
-        // Guardar el post en Supabase con la suscripción del autor
         await fetch(`${SB_URL}/rest/v1/publicaciones`, {
             method: 'POST',
             headers: { 
@@ -224,7 +229,6 @@ async function subirMensaje(cont, img) {
             })
         });
 
-        // Detectar si cita a otro post y notificar
         const matchCita = cont.match(/^>>(\d+)/);
         if (matchCita) {
             const idDestino = parseInt(matchCita[1], 10);
@@ -255,13 +259,16 @@ async function subirMensaje(cont, img) {
         }
 
         txtArea.value = "";
-        document.getElementById('postImage').value = "";
+        const imgInput = document.getElementById('postImage');
+        if (imgInput) imgInput.value = "";
         loadPosts();
     } catch (e) { console.warn("Error al enviar:", e); }
     finally {
-        const boton = document.getElementById('createPostBtn');
-        boton.disabled = false;
-        boton.textContent = "Publicar Mensaje";
+        const createPostBtn = document.getElementById('createPostBtn');
+        if (createPostBtn) {
+            createPostBtn.disabled = false;
+            createPostBtn.textContent = "Publicar Mensaje";
+        }
     }
 }
 
@@ -271,32 +278,38 @@ const usernameInput = document.getElementById("usernameInput");
 const saveUsernameBtn = document.getElementById("saveUsernameBtn");
 const cancelUsernameBtn = document.getElementById("cancelUsernameBtn");
 
-toggleUsernameBtn.onclick = () => {
-    usernamePanel.style.display = (usernamePanel.style.display === "none") ? "flex" : "none";
-};
-
-if (localStorage.getItem("custom_username")) {
-    usernameInput.value = localStorage.getItem("custom_username");
-    toggleUsernameBtn.textContent = `👤 User: ${localStorage.getItem("custom_username")}`;
+if (toggleUsernameBtn && usernamePanel) {
+    toggleUsernameBtn.onclick = () => {
+        usernamePanel.style.display = (usernamePanel.style.display === "none") ? "flex" : "none";
+    };
 }
 
-saveUsernameBtn.onclick = () => {
-    const nombre = usernameInput.value.trim();
-    if (nombre) {
-        localStorage.setItem("custom_username", nombre);
-        toggleUsernameBtn.textContent = `👤 User: ${nombre}`;
-        usernamePanel.style.display = "none";
-        loadPosts();
-    }
-};
+if (usernameInput && localStorage.getItem("custom_username")) {
+    usernameInput.value = localStorage.getItem("custom_username");
+    if (toggleUsernameBtn) toggleUsernameBtn.textContent = `👤 User: ${localStorage.getItem("custom_username")}`;
+}
 
-cancelUsernameBtn.onclick = () => {
-    usernameInput.value = "";
-    localStorage.removeItem("custom_username");
-    toggleUsernameBtn.textContent = "👤 Añadir Username";
-    usernamePanel.style.display = "none";
-    loadPosts();
-};
+if (saveUsernameBtn) {
+    saveUsernameBtn.onclick = () => {
+        const nombre = usernameInput ? usernameInput.value.trim() : "";
+        if (nombre) {
+            localStorage.setItem("custom_username", nombre);
+            if (toggleUsernameBtn) toggleUsernameBtn.textContent = `👤 User: ${nombre}`;
+            if (usernamePanel) usernamePanel.style.display = "none";
+            loadPosts();
+        }
+    };
+}
+
+if (cancelUsernameBtn) {
+    cancelUsernameBtn.onclick = () => {
+        if (usernameInput) usernameInput.value = "";
+        localStorage.removeItem("custom_username");
+        if (toggleUsernameBtn) toggleUsernameBtn.textContent = "👤 Añadir Username";
+        if (usernamePanel) usernamePanel.style.display = "none";
+        loadPosts();
+    };
+}
 
 loadPosts();
 actualizarReloj();
