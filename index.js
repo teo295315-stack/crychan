@@ -165,7 +165,7 @@ function urlBase64ToUint8Array(base64String) {
     return outputArray;
 }
 
-// Función para activar las notificaciones
+// Función para activar las notificaciones (con autolimpieza de suscripción previa)
 async function solicitarPermisoNotificaciones() {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
         console.warn('Este navegador no soporta notificaciones Push.');
@@ -178,6 +178,12 @@ async function solicitarPermisoNotificaciones() {
         const registro = await navigator.serviceWorker.ready;
         const vapidPublicKey = 'BIlgSBHIVVWwaypLTp8nSY0NFqxvRBZB1_p800UoShwkodKbF62xSlSFgf6idJ221HsIrzDug23cAUyCu71Cg_o'; 
         
+        // Limpiar suscripción previa si existe para evitar conflictos de claves VAPID
+        const suscripcionExistente = await registro.pushManager.getSubscription();
+        if (suscripcionExistente) {
+            await suscripcionExistente.unsubscribe();
+        }
+
         const suscripcion = await registro.pushManager.subscribe({
             userVisibleOnly: true,
             applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
