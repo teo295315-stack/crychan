@@ -8,20 +8,14 @@ if (typeof SB_URL === 'undefined') {
 const MAX_TABLONES_PERMITIDOS = 6;
 const CICLO_RESET_DIAS = 3;
 
-// REFERENCIAS A ELEMENTOS DEL DOM (HTML)
-const boardsList = document.getElementById("boardsList");
-const addBoardBtn = document.getElementById("addBoardBtn");
-const boardPanel = document.getElementById("boardPanel");
-const boardNameInput = document.getElementById("boardNameInput");
-const createBoardBtn = document.getElementById("createBoardBtn");
-const cancelBoardBtn = document.getElementById("cancelBoardBtn");
-const cooldownTimer = document.getElementById("cooldownTimer"); // El mini-temporizador
-
 /**
  * FUNCIÓN PARA CARGAR Y RENDERIZAR LOS TABLONES
  */
 async function loadBoards() {
     console.log("Iniciando carga de tablones desde Supabase...");
+    const boardsList = document.getElementById("boardsList");
+    const addBoardBtn = document.getElementById("addBoardBtn");
+
     try {
         const respuesta = await fetch(`${SB_URL}/rest/v1/publicaciones?select=junta`, {
             headers: { 
@@ -50,7 +44,7 @@ async function loadBoards() {
         // Controlar si se permite añadir más tablones (Límite de 6)
         if (addBoardBtn) {
             if (nombresTablones.length >= MAX_TABLONES_PERMITIDOS) {
-                addBoardBtn.style.display = "none"; // Escondemos el botón si llegamos al límite
+                addBoardBtn.style.display = "none";
                 console.warn("Límite de tablones alcanzado.");
             } else {
                 addBoardBtn.style.display = "block";
@@ -66,12 +60,11 @@ async function loadBoards() {
  * LÓGICA DEL TEMPORIZADOR DE RESET (3 DÍAS)
  */
 function actualizarTemporizadorReset() {
+    const cooldownTimer = document.getElementById("cooldownTimer");
     if (!cooldownTimer) return;
-    // Calculamos el ciclo de 3 días en milisegundos
+    
     const msPorCiclo = CICLO_RESET_DIAS * 24 * 60 * 60 * 1000;
     const ahora = Date.now();
-    
-    // Calculamos cuánto falta para el próximo múltiplo de 3 días desde el inicio de la era Unix
     const tiempoRestante = msPorCiclo - (ahora % msPorCiclo);
 
     const dias = Math.floor(tiempoRestante / (1000 * 60 * 60 * 24));
@@ -79,21 +72,24 @@ function actualizarTemporizadorReset() {
     const minutos = Math.floor((tiempoRestante % (1000 * 60 * 60)) / (1000 * 60));
     const segundos = Math.floor((tiempoRestante % (1000 * 60)) / 1000);
 
-    // Mostramos el tiempo en el div de la esquina
     cooldownTimer.classList.remove("hidden");
     cooldownTimer.innerHTML = `Reset en: ${dias}d ${horas}h ${minutos}m ${segundos}s`;
 }
 
-// Iniciar el reloj cada segundo
 setInterval(actualizarTemporizadorReset, 1000);
 
 /**
  * LÓGICA PARA CREAR TABLÓN
  */
+const createBoardBtn = document.getElementById("createBoardBtn");
+const boardPanel = document.getElementById("boardPanel");
+const boardNameInput = document.getElementById("boardNameInput");
+const cancelBoardBtn = document.getElementById("cancelBoardBtn");
+const addBoardBtnInit = document.getElementById("addBoardBtn");
+
 if (createBoardBtn) {
     createBoardBtn.onclick = async () => {
         const nombreNuevo = boardNameInput ? boardNameInput.value.trim() : "";
-        
         if (!nombreNuevo) {
             alert("Por favor, escribe un nombre para el tablón.");
             return;
@@ -120,7 +116,7 @@ if (createBoardBtn) {
             if (res.ok) {
                 if (boardPanel) boardPanel.classList.add("hidden");
                 if (boardNameInput) boardNameInput.value = "";
-                loadBoards(); // Recargamos la lista
+                loadBoards();
             }
         } catch (err) {
             alert("Error al conectar con Supabase. Asegúrate de que el proyecto no esté pausado.");
@@ -129,8 +125,8 @@ if (createBoardBtn) {
 }
 
 // BOTONES DE INTERFAZ
-if (addBoardBtn && boardPanel) {
-    addBoardBtn.onclick = () => boardPanel.classList.remove("hidden");
+if (addBoardBtnInit && boardPanel) {
+    addBoardBtnInit.onclick = () => boardPanel.classList.remove("hidden");
 }
 if (cancelBoardBtn && boardPanel && boardNameInput) {
     cancelBoardBtn.onclick = () => {
@@ -147,33 +143,6 @@ if (donateBtn && donateText) {
         donateText.classList.toggle("hidden");
         window.open("https://www.paypal.me/HOLAadamsinadamsito", "_blank");
     };
-}
-
-// --- LÓGICA AGREGADA PARA CONTROLAR EL USERNAME ---
-const usernameInput = document.getElementById("usernameInput");
-const saveUsernameBtn = document.getElementById("saveUsernameBtn");
-const cancelUsernameBtn = document.getElementById("cancelUsernameBtn");
-
-if (usernameInput) {
-    if (localStorage.getItem("custom_username")) {
-        usernameInput.value = localStorage.getItem("custom_username");
-    }
-
-    if (saveUsernameBtn) {
-        saveUsernameBtn.onclick = () => {
-            const nombre = usernameInput.value.trim();
-            if (nombre) {
-                localStorage.setItem("custom_username", nombre);
-            }
-        };
-    }
-
-    if (cancelUsernameBtn) {
-        cancelUsernameBtn.onclick = () => {
-            usernameInput.value = "";
-            localStorage.removeItem("custom_username");
-        };
-    }
 }
 
 // CARGA INICIAL
@@ -196,7 +165,7 @@ function urlBase64ToUint8Array(base64String) {
     return outputArray;
 }
 
-// Función que ejecutas cuando el usuario activa las notificaciones
+// Función para activar las notificaciones
 async function solicitarPermisoNotificaciones() {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
         console.warn('Este navegador no soporta notificaciones Push.');
@@ -207,11 +176,8 @@ async function solicitarPermisoNotificaciones() {
     
     if (permiso === 'granted') {
         const registro = await navigator.serviceWorker.ready;
-        
-        // Tu clave pública real integrada
         const vapidPublicKey = 'BIlgSBHIVVWwaypLTp8nSY0NFqxvRBZB1_p800UoShwkodKbF62xSlSFgf6idJ221HsIrzDug23cAUyCu71Cg_o'; 
         
-        // Suscribir obligando al flag visible para Android
         const suscripcion = await registro.pushManager.subscribe({
             userVisibleOnly: true,
             applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
@@ -219,7 +185,6 @@ async function solicitarPermisoNotificaciones() {
 
         console.log('Suscripción generada con éxito:', suscripcion);
         
-        // Enviar la suscripción a tu backend
         await fetch('/.netlify/functions/enviar', {
             method: 'POST',
             body: JSON.stringify(suscripcion),
