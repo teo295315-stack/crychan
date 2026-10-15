@@ -1,6 +1,8 @@
-// CONFIGURACIÓN DE CONEXIÓN A SUPABASE
-const SB_URL = "https://eqrqpzwdkvtnhbmzgxjq.supabase.co";
-const SB_KEY = "sb_publishable_z298DmGKzSJzJbzLv17s3g_QL1hcAqi";
+// CONFIGURACIÓN DE CONEXIÓN A SUPABASE (Protegido contra duplicados)
+if (typeof SB_URL === 'undefined') {
+    var SB_URL = "https://eqrqpzwdkvtnhbmzgxjq.supabase.co";
+    var SB_KEY = "sb_publishable_z298DmGKzSJzJbzLv17s3g_QL1hcAqi";
+}
 
 // VARIABLES DE CONTROL DE REGLAS
 const MAX_TABLONES_PERMITIDOS = 6;
