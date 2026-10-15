@@ -35,22 +35,24 @@ async function loadBoards() {
         console.log("Tablones encontrados:", nombresTablones.length);
         
         // Limpiar la lista visual antes de recargar
-        boardsList.innerHTML = "";
+        if (boardsList) boardsList.innerHTML = "";
         
         nombresTablones.forEach(nombre => {
             const enlace = document.createElement("a");
             enlace.className = "board-item";
             enlace.textContent = `/${nombre}/`;
             enlace.href = `board.html?board=${encodeURIComponent(nombre)}`;
-            boardsList.appendChild(enlace);
+            if (boardsList) boardsList.appendChild(enlace);
         });
 
         // Controlar si se permite añadir más tablones (Límite de 6)
-        if (nombresTablones.length >= MAX_TABLONES_PERMITIDOS) {
-            addBoardBtn.style.display = "none"; // Escondemos el botón si llegamos al límite
-            console.warn("Límite de tablones alcanzado.");
-        } else {
-            addBoardBtn.style.display = "block";
+        if (addBoardBtn) {
+            if (nombresTablones.length >= MAX_TABLONES_PERMITIDOS) {
+                addBoardBtn.style.display = "none"; // Escondemos el botón si llegamos al límite
+                console.warn("Límite de tablones alcanzado.");
+            } else {
+                addBoardBtn.style.display = "block";
+            }
         }
 
     } catch (error) {
@@ -62,6 +64,7 @@ async function loadBoards() {
  * LÓGICA DEL TEMPORIZADOR DE RESET (3 DÍAS)
  */
 function actualizarTemporizadorReset() {
+    if (!cooldownTimer) return;
     // Calculamos el ciclo de 3 días en milisegundos
     const msPorCiclo = CICLO_RESET_DIAS * 24 * 60 * 60 * 1000;
     const ahora = Date.now();
@@ -85,53 +88,59 @@ setInterval(actualizarTemporizadorReset, 1000);
 /**
  * LÓGICA PARA CREAR TABLÓN
  */
-createBoardBtn.onclick = async () => {
-    const nombreNuevo = boardNameInput.value.trim();
-    
-    if (!nombreNuevo) {
-        alert("Por favor, escribe un nombre para el tablón.");
-        return;
-    }
-
-    console.log("Intentando crear tablón:", nombreNuevo);
-
-    const postInicial = { 
-        junta: nombreNuevo, 
-        contenido: `Tablón /${nombreNuevo}/ creado. Bienvenido a CryChan.` 
-    };
-
-    try {
-        const res = await fetch(`${SB_URL}/rest/v1/publicaciones`, {
-            method: 'POST',
-            headers: {
-                'apikey': SB_KEY,
-                'Authorization': `Bearer ${SB_KEY}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(postInicial)
-        });
-
-        if (res.ok) {
-            boardPanel.classList.add("hidden");
-            boardNameInput.value = "";
-            loadBoards(); // Recargamos la lista
+if (createBoardBtn) {
+    createBoardBtn.onclick = async () => {
+        const nombreNuevo = boardNameInput ? boardNameInput.value.trim() : "";
+        
+        if (!nombreNuevo) {
+            alert("Por favor, escribe un nombre para el tablón.");
+            return;
         }
-    } catch (err) {
-        alert("Error al conectar con Supabase. Asegúrate de que el proyecto no esté pausado.");
-    }
-};
+
+        console.log("Intentando crear tablón:", nombreNuevo);
+
+        const postInicial = { 
+            junta: nombreNuevo, 
+            contenido: `Tablón /${nombreNuevo}/ creado. Bienvenido a CryChan.` 
+        };
+
+        try {
+            const res = await fetch(`${SB_URL}/rest/v1/publicaciones`, {
+                method: 'POST',
+                headers: {
+                    'apikey': SB_KEY,
+                    'Authorization': `Bearer ${SB_KEY}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(postInicial)
+            });
+
+            if (res.ok) {
+                if (boardPanel) boardPanel.classList.add("hidden");
+                if (boardNameInput) boardNameInput.value = "";
+                loadBoards(); // Recargamos la lista
+            }
+        } catch (err) {
+            alert("Error al conectar con Supabase. Asegúrate de que el proyecto no esté pausado.");
+        }
+    };
+}
 
 // BOTONES DE INTERFAZ
-addBoardBtn.onclick = () => boardPanel.classList.remove("hidden");
-cancelBoardBtn.onclick = () => {
-    boardPanel.classList.add("hidden");
-    boardNameInput.value = "";
-};
+if (addBoardBtn && boardPanel) {
+    addBoardBtn.onclick = () => boardPanel.classList.remove("hidden");
+}
+if (cancelBoardBtn && boardPanel && boardNameInput) {
+    cancelBoardBtn.onclick = () => {
+        boardPanel.classList.add("hidden");
+        boardNameInput.value = "";
+    };
+}
 
 // DONACIONES
 const donateBtn = document.getElementById("donateBtn");
 const donateText = document.querySelector(".donate-text");
-if (donateBtn) {
+if (donateBtn && donateText) {
     donateBtn.onclick = () => {
         donateText.classList.toggle("hidden");
         window.open("https://www.paypal.me/HOLAadamsinadamsito", "_blank");
