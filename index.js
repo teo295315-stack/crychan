@@ -165,36 +165,74 @@ function urlBase64ToUint8Array(base64String) {
     return outputArray;
 }
 
-// Función para activar las notificaciones (con autolimpieza de suscripción previa)
+// Función para activar notificaciones (Optimizada y protegida)
 async function solicitarPermisoNotificaciones() {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-        console.warn('Este navegador no soporta notificaciones Push.');
+        alert('Este navegador no soporta notificaciones Push.');
         return;
     }
 
-    const permiso = await Notification.requestPermission();
-    
-    if (permiso === 'granted') {
-        const registro = await navigator.serviceWorker.ready;
-        const vapidPublicKey = 'BIlgSBHIVVWwaypLTp8nSY0NFqxvRBZB1_p800UoShwkodKbF62xSlSFgf6idJ221HsIrzDug23cAUyCu71Cg_o'; 
+    const btnNotis = document.querySelector(".btn-notis");
+    if (btnNotis) {
+        btnNotis.disabled = true;
+        btnNotis.textContent = "⏳ Activando...";
+    }
+
+    try {
+        const permiso = await Notification.requestPermission();
         
-        // Limpiar suscripción previa si existe para evitar conflictos de claves VAPID
-        const suscripcionExistente = await registro.pushManager.getSubscription();
-        if (suscripcionExistente) {
-            await suscripcionExistente.unsubscribe();
+        if (permiso === 'granted') {
+            const registro = await navigator.serviceWorker.ready;
+            const vapidPublicKey = 'BIlgSBHIVVWwaypLTp8nSY0NFqxvRBZB1_p800UoShwkodKbF62xSlSFgf6idJ221HsIrzDug23cAUyCu71Cg_o'; 
+            
+            // Limpiar suscripciones obsoletas previas
+            const suscripcionExistente = await registro.pushManager.getSubscription();
+            if (suscripcionExistente) {
+                await suscripcionExistente.unsubscribe();
+            }
+
+            // Crear nueva suscripción
+            const suscripcion = await registro.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
+            });
+
+            console.log('Suscripción generada con éxito:', suscripcion);
+            
+            // Guardar en localStorage para uso inmediato
+            localStorage.setItem('crychan_push_sub', JSON.stringify(suscripcion));
+
+            // Enviar al servidor Netlify
+            const res = await fetch('/.netlify/functions/enviar', {
+                method: 'POST',
+                body: JSON.stringify({ subscription: suscripcion }),
+                headers: { 'Content-Type': 'application/json' }
+            });
+
+            if (res.ok) {
+                if (btnNotis) {
+                    btnNotis.textContent = "🔔 Notificaciones Activadas";
+                    btnNotis.style.background = "#28a745";
+                }
+            } else {
+                console.warn("Respuesta no OK de Netlify:", res.status);
+                if (btnNotis) {
+                    btnNotis.disabled = false;
+                    btnNotis.textContent = "🔔 Reintentar Activar";
+                }
+            }
+        } else {
+            alert("Permiso de notificaciones denegado.");
+            if (btnNotis) {
+                btnNotis.disabled = false;
+                btnNotis.textContent = "🔔 Activar Notificaciones";
+            }
         }
-
-        const suscripcion = await registro.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
-        });
-
-        console.log('Suscripción generada con éxito:', suscripcion);
-        
-        await fetch('/.netlify/functions/enviar', {
-            method: 'POST',
-            body: JSON.stringify(suscripcion),
-            headers: { 'Content-Type': 'application/json' }
-        });
+    } catch (err) {
+        console.error("Error al suscribir:", err);
+        if (btnNotis) {
+            btnNotis.disabled = false;
+            btnNotis.textContent = "🔔 Reintentar Activar";
+        }
     }
 }
