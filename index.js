@@ -168,3 +168,51 @@ if (usernameInput) {
 // CARGA INICIAL
 loadBoards();
 actualizarTemporizadorReset();
+
+// Función para convertir la clave pública VAPID
+function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding)
+        .replace(/\-/g, '+')
+        .replace(/_/g, '/');
+
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+
+    for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+}
+
+// Función que ejecutas cuando el usuario activa las notificaciones
+async function solicitarPermisoNotificaciones() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        console.warn('Este navegador no soporta notificaciones Push.');
+        return;
+    }
+
+    const permiso = await Notification.requestPermission();
+    
+    if (permiso === 'granted') {
+        const registro = await navigator.serviceWorker.ready;
+        
+        // Tu clave pública real integrada
+        const vapidPublicKey = 'BIlgSBHIVVWwaypLTp8nSY0NFqxvRBZB1_p800UoShwkodKbF62xSlSFgf6idJ221HsIrzDug23cAUyCu71Cg_o'; 
+        
+        // Suscribir obligando al flag visible para Android
+        const suscripcion = await registro.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
+        });
+
+        console.log('Suscripción generada con éxito:', suscripcion);
+        
+        // Enviar la suscripción a tu backend
+        await fetch('/.netlify/functions/enviar', {
+            method: 'POST',
+            body: JSON.stringify(suscripcion),
+            headers: { 'Content-Type': 'application/json' }
+        });
+    }
+}

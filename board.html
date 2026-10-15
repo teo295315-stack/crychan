@@ -1,6 +1,10 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#000000">
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CryChan - Board</title>
@@ -340,5 +344,10 @@ setInterval(loadPosts, 3000);
   if (savedTheme && savedTheme !== 'negro') setCryTheme(savedTheme);
 </script>
 
+<button onclick="solicitarPermisoNotificaciones()" class="btn-notis">
+    🔔 Activar Notificaciones
+</button>
+
+<script src="index.js"></script>
 </body>
 </html>
