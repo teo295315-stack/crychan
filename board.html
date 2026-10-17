@@ -365,13 +365,13 @@ setInterval(loadPosts, 3000);
 
 
 
-<!-- BOTÓN RECTANGULAR DE INSTALACIÓN -->
-<button id="pwaInstallBtn" style="
-    display: none; 
+<!-- BOTÓN RECTANGULAR VISIBLE FIJO -->
+<button id="pwaInstallBtn" onclick="triggerPWAInstall()" style="
+    display: block !important; 
     position: fixed; 
     bottom: 20px; 
     left: 20px; 
-    z-index: 9999; 
+    z-index: 99999; 
     background: #007bff; 
     color: white; 
     border: none; 
@@ -380,38 +380,30 @@ setInterval(loadPosts, 3000);
     font-weight: bold; 
     font-size: 14px; 
     cursor: pointer; 
-    box-shadow: 0 2px 6px rgba(0,0,0,0.3);">
+    box-shadow: 0 2px 6px rgba(0,0,0,0.4);">
     📲 Instalar CryChan
 </button>
 
 <script>
-let deferredPrompt;
-const installBtn = document.getElementById('pwaInstallBtn');
+let deferredPrompt = null;
 
-// Escuchar evento de instalación del navegador
+// Escuchar evento de instalación
 window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPrompt = e;
-    if (installBtn) installBtn.style.display = 'block';
 });
 
-// Acción al hacer clic en el botón
-if (installBtn) {
-    installBtn.addEventListener('click', async () => {
-        if (!deferredPrompt) return;
-        installBtn.style.display = 'none';
+// Función de instalación al pulsar
+async function triggerPWAInstall() {
+    if (deferredPrompt) {
         deferredPrompt.prompt();
         const { outcome } = await deferredPrompt.userChoice;
-        console.log(`Resultado de la instalación: ${outcome}`);
+        console.log('Resultado:', outcome);
         deferredPrompt = null;
-    });
+    } else {
+        alert("Para instalar CryChan en tu dispositivo:\n1. Pulsa los 3 puntos del navegador (arriba a la derecha).\n2. Elige 'Instalar aplicación' o 'Añadir a la pantalla de inicio'.");
+    }
 }
-
-// Ocultar si la app ya se ha instalado
-window.addEventListener('appinstalled', () => {
-    if (installBtn) installBtn.style.display = 'none';
-    console.log('CryChan instalada con éxito.');
-});
 </script>
 
 
