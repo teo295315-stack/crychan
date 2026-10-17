@@ -361,5 +361,63 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 
 <script src="index.js"></script>
+
+
+
+
+  <!-- BOTÓN FLOTANTE DE INSTALAR EN LA ESQUINA INFERIOR IZQUIERDA -->
+<button id="pwaInstallBtn" style="
+    display: none; 
+    position: fixed; 
+    bottom: 20px; 
+    left: 20px; 
+    z-index: 9999; 
+    background: #28a745; 
+    color: white; 
+    border: none; 
+    padding: 10px 16px; 
+    border-radius: 8px; 
+    font-weight: bold; 
+    font-size: 14px; 
+    cursor: pointer; 
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    transition: transform 0.2s ease;">
+    📲 Instalar CryChan
+</button>
+
+<script>
+let deferredPrompt;
+const installBtn = document.getElementById('pwaInstallBtn');
+
+// Detectar si el navegador permite la instalación (Android, PC, etc.)
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    if (installBtn) installBtn.style.display = 'block';
+});
+
+// Acción al hacer clic en el botón
+if (installBtn) {
+    installBtn.addEventListener('click', async () => {
+        if (!deferredPrompt) return;
+        installBtn.style.display = 'none';
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        console.log(`Resultado de la instalación: ${outcome}`);
+        deferredPrompt = null;
+    });
+}
+
+// Ocultar el botón automáticamente si la app ya está instalada
+window.addEventListener('appinstalled', () => {
+    if (installBtn) installBtn.style.display = 'none';
+    console.log('CryChan se ha instalado con éxito.');
+});
+</script>
+
+
+
+
+  
 </body>
 </html>
