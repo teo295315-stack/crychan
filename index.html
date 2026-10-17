@@ -416,7 +416,51 @@ window.addEventListener('appinstalled', () => {
 </script>
 
 
+<!-- BOTÓN FLOTANTE DE INSTALAR EN LA ESQUINA INFERIOR IZQUIERDA -->
+<button id="pwaInstallBtn" style="
+    display: none; 
+    position: fixed; 
+    bottom: 20px; 
+    left: 20px; 
+    z-index: 9999; 
+    background: #007bff; 
+    color: white; 
+    border: none; 
+    padding: 10px 16px; 
+    border-radius: 0; 
+    font-weight: bold; 
+    font-size: 14px; 
+    cursor: pointer; 
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);">
+    📲 Instalar CryChan
+</button>
 
+<script>
+let deferredPrompt;
+const installBtn = document.getElementById('pwaInstallBtn');
+
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    if (installBtn) installBtn.style.display = 'block';
+});
+
+if (installBtn) {
+    installBtn.addEventListener('click', async () => {
+        if (!deferredPrompt) return;
+        installBtn.style.display = 'none';
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        console.log(`Resultado de la instalación: ${outcome}`);
+        deferredPrompt = null;
+    });
+}
+
+window.addEventListener('appinstalled', () => {
+    if (installBtn) installBtn.style.display = 'none';
+    console.log('CryChan instalada con éxito.');
+});
+</script>
 
   
 </body>
