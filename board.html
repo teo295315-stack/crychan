@@ -365,13 +365,13 @@ setInterval(loadPosts, 3000);
 
 
 
-<!-- BOTÓN RECTANGULAR VISIBLE FIJO -->
+<!-- BOTÓN RECTANGULAR DE INSTALACIÓN -->
 <button id="pwaInstallBtn" onclick="triggerPWAInstall()" style="
     display: block !important; 
     position: fixed; 
     bottom: 20px; 
     left: 20px; 
-    z-index: 99999; 
+    z-index: 999999; 
     background: #007bff; 
     color: white; 
     border: none; 
@@ -387,13 +387,11 @@ setInterval(loadPosts, 3000);
 <script>
 let deferredPrompt = null;
 
-// Escuchar evento de instalación
 window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPrompt = e;
 });
 
-// Función de instalación al pulsar
 async function triggerPWAInstall() {
     if (deferredPrompt) {
         deferredPrompt.prompt();
@@ -401,7 +399,7 @@ async function triggerPWAInstall() {
         console.log('Resultado:', outcome);
         deferredPrompt = null;
     } else {
-        alert("Para instalar CryChan en tu dispositivo:\n1. Pulsa los 3 puntos del navegador (arriba a la derecha).\n2. Elige 'Instalar aplicación' o 'Añadir a la pantalla de inicio'.");
+        alert("Para instalar CryChan:\n1. Toca los 3 puntos del navegador (arriba a la derecha).\n2. Selecciona 'Instalar aplicación' o 'Añadir a la pantalla de inicio'.");
     }
 }
 </script>
