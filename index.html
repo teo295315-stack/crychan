@@ -365,7 +365,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-<!-- BOTÓN RECTANGULAR CON ESQUINAS EN PUNTA (ÁNGULO RECTO) -->
+<!-- BOTÓN RECTANGULAR DE INSTALACIÓN -->
 <button id="pwaInstallBtn" style="
     display: none; 
     position: fixed; 
@@ -388,12 +388,14 @@ document.addEventListener('DOMContentLoaded', () => {
 let deferredPrompt;
 const installBtn = document.getElementById('pwaInstallBtn');
 
+// Escuchar evento de instalación del navegador
 window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPrompt = e;
     if (installBtn) installBtn.style.display = 'block';
 });
 
+// Acción al hacer clic en el botón
 if (installBtn) {
     installBtn.addEventListener('click', async () => {
         if (!deferredPrompt) return;
@@ -405,6 +407,7 @@ if (installBtn) {
     });
 }
 
+// Ocultar si la app ya se ha instalado
 window.addEventListener('appinstalled', () => {
     if (installBtn) installBtn.style.display = 'none';
     console.log('CryChan instalada con éxito.');
