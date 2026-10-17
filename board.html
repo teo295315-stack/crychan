@@ -365,7 +365,7 @@ setInterval(loadPosts, 3000);
 
 
 
-<!-- BOTÓN FLOTANTE DE INSTALAR EN LA ESQUINA INFERIOR IZQUIERDA -->
+<!-- BOTÓN RECTANGULAR DE INSTALACIÓN -->
 <button id="pwaInstallBtn" style="
     display: none; 
     position: fixed; 
@@ -376,7 +376,7 @@ setInterval(loadPosts, 3000);
     color: white; 
     border: none; 
     padding: 10px 16px; 
-    border-radius: 0; 
+    border-radius: 0px !important; 
     font-weight: bold; 
     font-size: 14px; 
     cursor: pointer; 
@@ -388,12 +388,14 @@ setInterval(loadPosts, 3000);
 let deferredPrompt;
 const installBtn = document.getElementById('pwaInstallBtn');
 
+// Escuchar evento de instalación del navegador
 window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPrompt = e;
     if (installBtn) installBtn.style.display = 'block';
 });
 
+// Acción al hacer clic en el botón
 if (installBtn) {
     installBtn.addEventListener('click', async () => {
         if (!deferredPrompt) return;
@@ -405,6 +407,7 @@ if (installBtn) {
     });
 }
 
+// Ocultar si la app ya se ha instalado
 window.addEventListener('appinstalled', () => {
     if (installBtn) installBtn.style.display = 'none';
     console.log('CryChan instalada con éxito.');
