@@ -4,9 +4,13 @@ if (typeof SB_URL === 'undefined') {
     var SB_KEY = "sb_publishable_z298DmGKzSJzJbzLv17s3g_QL1hcAqi";
 }
 
-// VARIABLES DE CONTROL DE REGLAS
-const MAX_TABLONES_PERMITIDOS = 6;
-const CICLO_RESET_DIAS = 3;
+// VARIABLES DE CONTROL DE REGLAS (Protegidas contra re-declaración)
+if (typeof MAX_TABLONES_PERMITIDOS === 'undefined') {
+    var MAX_TABLONES_PERMITIDOS = 6;
+}
+if (typeof CICLO_RESET_DIAS === 'undefined') {
+    var CICLO_RESET_DIAS = 3;
+}
 
 /**
  * FUNCIÓN PARA CARGAR Y RENDERIZAR LOS TABLONES
